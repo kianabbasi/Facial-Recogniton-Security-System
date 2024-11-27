@@ -1,0 +1,41 @@
+import cv2
+from deepface import DeepFace
+import os
+import re
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Path to reference images relative to the script's location
+reference_dir = os.path.join(script_dir, "reference_images")
+
+reference_images = {}
+for filename in os.listdir(reference_dir):
+    if filename.endswith(".jpg") or filename.endswith(".png"):
+        name = re.sub(r'\d+$', '', os.path.splitext(filename)[0])
+        reference_images[name] = cv2.imread(os.path.join(reference_dir, filename))
+
+# Capture image from webcam
+cap = cv2.VideoCapture(0)
+ret, input_img = cap.read()
+cap.release()
+
+if not ret:
+    print("ERROR: Failed to capture image")
+    exit(1)
+
+# Compare with reference images
+matched_name = None
+for name, ref_img in reference_images.items():
+    try:
+        result = DeepFace.verify(input_img, ref_img.copy())
+        if result['verified']:
+            matched_name = name
+            break
+    except ValueError:
+        continue
+
+# Output the result
+if matched_name:
+    print(f"UNLOCK: Welcome {matched_name}!")
+else:
+    print("LOCK")
